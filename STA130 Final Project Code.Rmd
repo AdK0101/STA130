@@ -1,0 +1,389 @@
+---
+title: Understanding Reader Satisfaction Through the Lens of Story Elements in Detective
+  Novels
+author: '**Team Avengers:** Aditya Khan, Yu Jin Shim, Tina Kim'
+date: "December 3, 2021"
+output:
+  beamer_presentation:
+    theme: Rochester
+    colortheme: orchid
+    fonttheme: structurebold
+    slide_level: 2
+  slidy_presentation: default
+subtitle: For Novels Written Between the Early 1800s - Early 1900s
+classoption: aspectratio=169
+fontsize: 11pt
+urlcolor: blue
+---
+
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, results='hide'}
+library(tidyverse)
+detective_data <- read_csv("detective_data.csv")
+```
+
+## Table of Contents
+
+|          Section         | Slide Number(s) |
+|:------------------------:|:---------------:|
+| Introduction             |        3        |
+| Objectives and Questions |        4        |
+| Question 1               |       5-8       |
+| Question 2               |       9-12      |
+| Question 3               |      13-16      |
+| Conclusions              |        17       |
+| Limitations              |        18       |
+| References               |        19       |
+
+## Introduction
+- A key objective of a detective novel is to hook the audience into its narrative, and satisfy them with intrigue and mystery. 
+\vspace{0.2cm}
+- One question that arises from observing detective novels is whether there are certain characteristics these books have that may influence reader satisfaction (our focus). 
+\vspace{0.2cm}
+- We intend to garner insights from the "detective_data" dataset which contains information about a sample of 352 detective novels published between the early 1800s and early 1900s. 
+\vspace{0.2cm}
+- We hope to use the data from this sample to make conclusions about early modern detective novels and reader satisfaction in a way that that is accessible particularly for Professors Hammond and Stern.
+
+## Objectives and Questions
+
+We consider three different perspectives, each leading to a research question. They may allow us to make conclusions about all detective novels published between the early 1800s - early 1900s (the **population**):
+
+1. Publishing Perspective: find out whether there is a year range in which most satisfactory early modern detective novels were made. 
+    - \textcolor{purple}{Question:} What are the range of plausible values that the publish year of a book can take for books that have at least a satisfaction level of 4?
+
+2. Reader's Perspective: assess whether gender bias is present in significant events, and whether it may impact reader satisfaction. 
+    - \textcolor{green}{Question:} Is the proportion of male and female detectives the same in the stories of male and female authors?
+    
+3. Cultural Perspective: consider whether analysing reader satisfaction provides support for immense cultural impact of Conan Doyle's work (Armstrong, 2016).
+    - \textcolor{cyan}{Question:} Is the mean reader satisfaction similar between novels written by Arthur Conan Doyle, and those which are not?
+
+## \textcolor{purple}{Q1:} Introduction to the First Question
+
+```{=latex}
+\begin{block}{}
+What are the range of plausible values that the publish year of a book can take for books that have at least a satisfaction level of 4?
+\end{block}
+```
+- We define a satisfying novel to have a reader satisfaction of at least 4 out of 5. 
+\vspace{0.1cm}
+    - If we consider 3 out of 5 to indicate indifference (as it is the middle of the scale), 4 appears to be the lower bound to consider a book satisfying. 
+\vspace{0.1cm}
+    - The variable used to find reader satisfaction for each novel is "how_satisfying_is_this_story_as_a_piece_of_detective_fiction".
+\vspace{0.1cm}
+    - The variable that indicates publish year of each book is "year_published".
+\vspace{0.2cm}
+- Our goal is to infer a specific range of years between the 19th and 20th centuries when it was likely for a satisfying novel to have been published. 
+
+## \textcolor{purple}{Q1:} Visualising the Data
+- This histogram shows the publish years of satisfactory books in this sample.
+- The centre of the distribution is concentrated strongly around the years of 1905 to 1910, and there is only one peak in the distribution. This suggests that the majority of satisfactory books in this sample were published around those dates.
+```{r, echo=FALSE, fig.align='center', fig.height=2, fig.width=3.75, message=FALSE, warning=FALSE}
+detective_data %>% 
+  filter(how_satisfying_is_this_story_as_a_piece_of_detective_fiction >= 4) %>%  
+  ggplot(aes(x = year_published)) + 
+  geom_histogram(bins = 5, fill="purple", color="black") +
+  labs(title = "Distribution of Publish Years For Satisfactory Novels", x = "Publish Year",
+       y = "Number of Books") +
+  theme(plot.title = element_text(size=10),
+        axis.text.x = element_text(size = 8),
+        axis.text.y = element_text(size = 8),
+        axis.title.x = element_text(size = 10),
+        axis.title.y = element_text(size = 10))
+```
+
+## \textcolor{purple}{Q1:} Statistical Analysis
+
+- Using a bootstrap confidence interval test, we are able to use the data from the sample, to:
+\vspace{0.1cm}
+    1. Find a distribution of years in which the **true year** when the most satisfactory books were published lies (by a process called resampling - done 1000 times). 
+        - We use the **mean** publish year of satisfactory books to build this distribution.
+\vspace{0.1cm}
+    2. Narrow down in the new distribution a plausible range of years where the true year lies.
+        - We exclude the 2.5% most extreme values on both ends of the distribution.
+\vspace{0.2cm}
+```{r, echo=FALSE, fig.align='center', fig.height=2, fig.width=4, fig.show = "hide", message=FALSE, warning=FALSE, results="hide"}
+
+set.seed(257) 
+repetitions <- 1000
+
+boot_p <- rep(NA, repetitions) 
+ 
+for (i in 1:repetitions)
+{
+  boot_samp <- detective_data %>% 
+    ungroup() %>% 
+    filter(how_satisfying_is_this_story_as_a_piece_of_detective_fiction >= 4) %>% 
+    sample_n(size = nrow(detective_data), replace=TRUE)
+
+  boot_p[i]  <- boot_samp %>% 
+      filter(!is.na(year_published)) %>% 
+      summarise(mean_year = mean(year_published)) %>% 
+      as.numeric()
+}
+
+newboot <- tibble(boot_p)
+ggplot(newboot, aes(x=boot_p)) + geom_histogram(bins = 20, fill="gray", color="black") + 
+  labs(x="Mean Years From Bootstrap Samples", y = "Count", title = "Bootstrap Sampling Distribution") +
+  theme_minimal()
+quantile(newboot$boot_p, c(0.025, 0.975))
+```
+- As we exclude those extreme values, we are left with 95% confidence that the true year is in the remaining interval of years the distribution covers:
+
+|   2.5%   |   97.5%  |
+|:--------:|:--------:|
+| 1904.481 | 1906.197 |
+
+## \textcolor{purple}{Q1:} Results and Discussion
+- Based on the test, we can claim with 95% confidence that the true year when the most satisfactory books were published between the early 1800s - early 1900s, between 1904.5 and 1906.2. 
+\vspace{0.075cm}
+    - That is, approximately 1905.
+\vspace{0.2cm}
+- Furthermore, this may provide credence to a claim that 1905 can be considered a "golden year" for detective novels.
+\vspace{0.2cm}
+- However, this conclusion does not determine why 1905 was a successful year.
+\vspace{0.2cm}
+- Thus, we recommend further research into considering why 1905 may have yielded such a relatively high number of satisfying novels. 
+
+## \textcolor{green}{Q2:} Introduction to the Second Question
+```{=latex}
+\begin{block}{}
+Is the proportion of male and female detectives the same in the stories of male and female authors?
+\end{block}
+```
+- To consider this question, we mutate the data in the following manner:
+    - New variables, sum_male and sum_female are created to sum the number of detectives by gender, excluding missing values.
+\vspace{0.1cm}
+    - mean_prop is the proportion of male detectives calculated using the mentioned variables. 
+- This lets us observe the mean proportion of male detectives by author gender:
+\vspace{0.2cm}
+```{r, echo=FALSE, fig.align='center', fig.height=2, fig.width=4, message=FALSE, warning=FALSE}
+data_mutated = detective_data %>%
+                    mutate(count_male = as.numeric(detective_number_1_gender == 'Male') + as.numeric((detective_number_2_gender == 'Male') & !is.na(detective_number_2_gender)),
+                           count_female = as.numeric(detective_number_1_gender == 'Female') + as.numeric((detective_number_2_gender == 'Female') & !is.na(detective_number_2_gender)),
+                           prop_male = count_male / (count_male + count_female)) %>%
+                    filter(!is.na(prop_male)) %>%
+                    select(sex, count_male, count_female, prop_male)
+
+temp = data_mutated %>%
+                    group_by(sex) %>%
+                    summarize(n = n(), sum_male = sum(count_male), 
+                              sum_female = sum(count_female), 
+                              mean_prop = mean(prop_male))
+
+obs_diff <- as.numeric(temp[1,5]) - as.numeric(temp[2,5])
+```
+
+|      Sex      | sum_male | sum_female | mean_prop |
+|:-------------:|:--------:|:----------:|:---------:|
+| Female Author |    35    |     28     |   0.556   |
+| Male Author   |    289   |      0     |   1.000   |
+
+## \textcolor{green}{Q2:} Visualising the Data
+- We further explore the data in the sample to observe the difference in the number of female and male detectives in the novels of male and female authors in a bar plot. 
+- All male authors used male detectives, whereas female authors showed about equal usage of male and female detectives, motivating this research question. 
+
+```{r, echo=FALSE, fig.align='center', fig.height=2, fig.width=4, message=FALSE, warning=FALSE}
+data_new = data.frame(
+    author_gender = rep(c("Female", "Male"), each = 2),
+    detective_gender = rep(c("Female", "Male", "Female", "Male")),
+    count = c(28, 35, 0, 289)
+)
+
+ggplot(data_new, aes(fill = detective_gender, y = count, x = author_gender)) + 
+  labs(fill = "Detective's Gender") +
+    geom_bar(position = "fill", stat = "identity") +
+  labs(title = "Proportion of Detectives by Author and Detective Gender", x = "Author's Gender",
+       y = "Proportion of Detectives") +
+  theme(plot.title = element_text(size=10),
+        axis.text.x = element_text(size = 6),
+        axis.text.y = element_text(size = 6),
+        axis.title.x = element_text(size = 10),
+        axis.title.y = element_text(size = 10)) 
+```
+
+## \textcolor{green}{Q2:} Statistical Analysis
+- Referring to the table in slide 9, there is a 0.443 difference in the proportion of male detectives in the novels of male and female authors.
+- We conduct a randomisation test to check how significant this difference is, with the following hypotheses:
+    - $H_0$: there is no difference in the proportion of male detectives in the stories of male and female authors. 
+    - $H_1$: there is a difference in the proportion of male detectives in the stories of male and female authors. 
+- This test simulates (1000 times) a hypothetical where if each of the novels in the sample were randomly written by a male or female author, how much of a difference there would still be in the proportion of male detectives.
+- The resulting p-value calculated for this test was 0, which suggests very strong evidence against $H_0$, as it is less than 0.001. 
+- So, male and female authors do indeed use different proportions of male detectives.
+
+```{r, echo=FALSE, fig.align='center', fig.height=2, fig.width=4, fig.show = "hide", message=FALSE, warning=FALSE}
+set.seed(130)
+repetitions = 1000
+simulated_values = rep(NA, repetitions)
+
+for (i in 1:repetitions){
+    simdata = data_mutated %>% mutate(sex = sample(sex))
+
+    sim_value = simdata %>% group_by(sex) %>%
+                        summarize(means = mean(prop_male)) %>%
+                        summarize(value = diff(means))
+    simulated_values[i] = as.numeric(sim_value)
+}
+
+sim_data = tibble(mean_diff = simulated_values)
+pvalue = sim_data %>%
+                  filter(mean_diff <= obs_diff | mean_diff >= abs(obs_diff)) %>%
+                  summarize(p_value = n() / repetitions)
+
+sim_data %>% ggplot(aes(x = mean_diff)) + 
+             geom_histogram(binwidth = 0.05, color = "black", fill = "grey") +
+             geom_vline(xintercept = obs_diff, color = "red") + 
+             geom_vline(xintercept = abs(obs_diff), color = "blue") +
+             labs(title = "Sampling Distribution for Male Detective Proportion Differences",
+                  x = "Difference in Proportion", y = "Count")
+```
+
+## \textcolor{green}{Q2:} Results and Discussion
+- The findings from the visualisation and the statistical analysis suggest a bias towards male detectives in the novels of male authors, as compared to novels by females. 
+\vspace{0.2cm}
+- There is conflicting interpretations on whether this gender bias can be said to have a sufficient effect on reader satisfaction. 
+\vspace{0.05cm}
+    - Claim 1: Readers tend to like to relate to the characters in stories that match their gender role (Jose, 1989). A dearth of female detectives in male authored stories may alienate female readers. 
+\vspace{0.05cm}
+    - Claim 2: the existence of bias may be driven by a general preference for male protagonists, irrespective of the reader's gender (Jose, 1989).
+\vspace{0.2cm}
+- Further research is recommended to investigate why female authors during this time used a more balanced gender representation, than male authors.
+
+## \textcolor{Cyan}{Q3:} Introduction to the Third Question
+```{=latex}
+\begin{block}{}
+Is the mean reader satisfaction similar between novels written by Arthur Conan Doyle, and those which are not?
+\end{block}
+```
+
+- For this question, we create a new variable called "conan" which returns a value of True if the novel was written by Arthur Conan Doyle, and False otherwise. 
+- This allows us to split the novels in the sample into the aforementioned groups, letting us compare the mean satisfaction of novels:
+
+```{r, echo=FALSE, fig.align='center', fig.height=2, fig.width=4, message=FALSE, warning=FALSE, results="hide"}
+new1 <- detective_data %>%
+      group_by(story_code) %>%
+      select(how_satisfying_is_this_story_as_a_piece_of_detective_fiction, surname_s, story_code) %>%
+      filter(!is.na(surname_s)) %>%
+      mutate(conan = ifelse(surname_s == 'Concan Doyle', 'True', 'False'))
+
+test_stat_act <- new1 %>% 
+  group_by(conan) %>% 
+  summarise(m = mean(how_satisfying_is_this_story_as_a_piece_of_detective_fiction)) %>%
+  ungroup() %>% 
+  summarise(test_stat = diff(m)) %>% 
+  as.numeric()
+```
+
+| Mean Satisfaction (Conan Doyle) 	| Mean Satisfaction (Not Conan Doyle) 	|
+|:-------------------------------:	|:-----------------------------------:	|
+|               3.23              	|                                2.76 	|
+- Conan Doyle averages a 0.47 higher satisfaction rating than the rest of the authors in this sample. 
+
+## \textcolor{cyan}{Q3:} Visualising the Data
+- Observing the boxplot below, the higher whiskers, and the larger box indicate that Conan Doyle's novels have higher ratings than others' works.
+\vspace{0.05cm}
+- This shows that Conan Doyle's satisfaction rating does tend to be higher than other authors' in this sample. 
+```{r, echo=FALSE, fig.align='center', fig.height=2, fig.width=4, message=FALSE, warning=FALSE,}
+new1 %>% ggplot(aes(group = conan, y = how_satisfying_is_this_story_as_a_piece_of_detective_fiction)) + 
+                 geom_boxplot(aes(colour = conan))+
+  labs(title = "Satisfaction Rating by Author Type", x = "Author Type",
+       y = "Satisfaction Rating", color = "Written By Conan Doyle") +
+    theme(plot.title = element_text(size=10, hjust = 0.5),
+        axis.text.x = element_text(size = 6),
+        axis.text.y = element_text(size = 6),
+        axis.title.x = element_text(size = 10),
+        axis.title.y = element_text(size = 10)) 
+```
+
+## \textcolor{cyan}{Q3:} Statistical Analysis
+- We will use a randomisation test to check whether the statistic of 0.47 indicates a significant difference between the two means.
+\vspace{0.1cm}
+- The randomisation test will use the following hypotheses:
+    - $H_0$: there is no difference in the mean reader satisfaction for novels written by Conan Doyle, and novels not written by Conan Doyle. 
+\vspace{0.05cm}
+    - $H_1$: there is a difference in the mean reader satisfaction for novels written by Conan Doyle, and novels not written by Conan Doyle. 
+\vspace{0.1cm}
+```{r, echo=FALSE, fig.align='center', fig.height=2, fig.width=4, fig.show = "hide", message=FALSE, warning=FALSE, results="hide"}
+
+hypothesised_value = 0
+
+set.seed(257)
+rep <- 1000
+sim_stats <- rep(NA, rep)
+
+for (i in 1:rep){
+  new5 <- new1 %>% 
+  ungroup() %>%
+    mutate(conan = sample(conan))
+  
+  simulation_val <- new5 %>% 
+    group_by(conan) %>%
+    summarise(m = mean(how_satisfying_is_this_story_as_a_piece_of_detective_fiction)) %>%
+    ungroup() %>% 
+    summarise(test_stat = diff(m)) %>% 
+    as.numeric()
+    
+  sim_stats[i] <- simulation_val
+  
+}
+
+sim_tibble <- tibble(simsstat = sim_stats)
+sim_tibble %>% ggplot(aes(x=simsstat)) + 
+  geom_histogram(bins = 20, color="black") +
+  geom_vline(xintercept = -abs(test_stat_act), color = "red") +
+  geom_vline(xintercept = abs(test_stat_act), color = "blue") +
+          labs(title = "Sampling Distribution Comparing Mean Reader Satisfaction Differences",
+                  x = "Difference in Mean", y = "Count")
+
+p_value <- sim_tibble %>% 
+  filter(sim_stats <= hypothesised_value - abs(test_stat_act-hypothesised_value) | 
+         sim_stats >= hypothesised_value + abs(test_stat_act-hypothesised_value)) %>%   
+  summarise(p_value = n() / rep) %>% 
+  as.numeric()
+```
+- After running the randomisation test, the p-value calculated was 0.  
+\vspace{0.1cm}
+- As this p-value is less than 0.001, there is strong evidence against $H_0$, which means we can reject it. 
+\vspace{0.1cm}
+- This suggests that there is a significant difference between the mean reader satisfaction for novels written by Conan Doyle and other authors. 
+
+## \textcolor{cyan}{Q3:} Results and Discussion
+- Based on the visualisation and the results from the randomisation test, it suggests that Conan Doyle does have a significantly higher mean satisfaction rating. 
+\vspace{0.2cm}
+- This result suggests that there is backing to the common belief that Conan Doyle and his famous Sherlock Holmes novels do lead to higher reader satisfaction, on average. 
+\vspace{0.2cm}
+- Based on these findings, we suggest further research could be done to understand what exactly makes Conan Doyle's novels much more enjoyable. 
+\vspace{0.2cm}
+- Understanding what stylistic elements make Conan Doyle's novels entertaining may lead to a greater understanding of what makes a detective novel great. 
+
+## Conclusion
+- Based on the findings from each of the research questions, we received insights into each of the three perspectives.
+\vspace{0.2cm}
+- From the perpsective of publishing, we claim with 95% confidence that 1905 was the year when the most satisfying early modern detective novels were published. 
+\vspace{0.2cm}
+- From the perspective of the reader, the presence of gender bias favouring male detectives in the male authors' novels, taps into a debate about whether gender bias does impact reader satisfaction. 
+\vspace{0.2cm}
+- From the cultural perspective, we found backing for the belief that Conan Doyle is one of the great detective novelists, leading to questions about what makes him successful. 
+\vspace{0.2cm}
+- These findings help elucidate the relationship between reader satisfaction and detective novel characteristics, while still leaving open avenues for further research.
+
+## Limitations
+- A limitation for question 1 is that the variable that we are using in the bootstrapping process (mean of publish year), represents year as a decimal value. 
+\vspace{0.05cm}
+    - Technically, years are not supposed to be considered in non-whole values.
+    - A decimal year value still has meaning (as decimals represent partway through a year).
+\vspace{0.2cm}
+- A limitation for the randomisation test in question 2 was that reader satisfaction was treated as a numerical variable, it is a categorical variable.
+\vspace{0.05cm}
+    - This may still give useful results, as mean reader satisfaction is a valid metric.
+    - However, this test is usually supposed to take numerical variables instead. 
+\vspace{0.2cm}
+- The boxplot visualisation in question 3 is also supposed to take a numerical variable, instead of the categorical reader satisfaction. 
+\vspace{0.05cm}
+    - Reader satisfaction still works as the values it takes have numerical meaning. 
+\vspace{0.2cm}
+- Our questions were from a pool of many questions. Not all were significant. We don't wish to provide an impression that this dataset only provides positive results. 
+
+## References
+- Armstrong, J. K. (2016, January 6). How Sherlock Holmes changed the world. Retrieved December 3, 2021, from https://www.bbc.com/culture/article/20160106-how-sherlock-holmes-changed-the-world
+\vspace{0.2cm}
+- Jose, P. (1989). The role of gender and gender role similarity in readers' identification with story characters [Abstract]. Sex Roles, 21, 697-713. doi:https://doi.org/10.1007/BF00289178
